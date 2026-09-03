@@ -1,24 +1,30 @@
 # Health check
 
-`node health/check.mjs` проверяет все сайты из `health/sites.json` и печатает Markdown-отчёт. Без зависимостей, Node ≥ 20.
+Ежедневная проверка здоровья всех сайтов DevNervs. Три части:
 
-Запускается ежедневно облачной рутиной Claude Code («DevNervs health check»), результат виден на https://claude.ai/code/routines. Можно запускать и руками.
+1. **Worker `devnervs-health`** (Cloudflare, cron `40 4 * * *` UTC, то есть 07:40 по Киеву летом). Обходит сайты из `health/sites.json`, при наличии токена читает аналитику, логи и WAF Cloudflare, пишет отчёт в свою D1 `devnervs-health` (таблица `runs`, хранится 60 последних) и при проблемах шлёт сводку в Telegram. Бесплатно: cron-триггеры и D1 входят в бесплатный план Workers.
+2. **Облачная рутина Claude «DevNervs health check»** (08:00 по Киеву). Читает последний запуск из D1 через Cloudflare-коннектор, добирает воркеры и заявки в базах BUDni, сравнивает с прошлыми днями, объясняет находки и пишет, что делать. Результат: https://claude.ai/code/routines
+3. **`node health/check.mjs`** — тот же скрипт руками с ноутбука, плюс срок TLS-сертификатов.
 
-## Что проверяет
+## Что проверяется
 
-**Снаружи, без токенов:** статус и время ответа каждой страницы из `paths`, текст-маркер на главной (`expectText`), срок TLS-сертификата, заголовки безопасности (`securityHeaders: true`), индексируемость (`expectIndexable`), поведение API-эндпоинтов на неправильный ввод (`endpoints`: например, `POST /api/lead` с пустым телом обязан отвечать 400, а не 500).
+**Снаружи (без токенов):** статус и время ответа страниц из `paths`, текст-маркер на главной, заголовки безопасности, ожидаемый `noindex`, тексты ошибок («Application error», «Щось зламалося»), поведение API на неправильный ввод (`POST /api/lead` с пустым телом обязан дать 400, а не 500).
 
-**Со стороны Cloudflare, если задан `CLOUDFLARE_API_TOKEN`:**
-- Worker: запросы, ошибки выполнения, 4xx/5xx и CPU за сутки против предыдущих суток (сплеск трафика ×4, рост 4xx ×3 — сигнал сканирования или атаки);
-- Workers Logs: строки уровня `error` за сутки, сгруппированные по сообщению;
-- зона (домен в Cloudflare): WAF/firewall-события с топом по действию, источнику, стране и пути; доля 5xx с edge; сплески трафика;
-- D1: размер базы и число запросов за сутки.
+**Со стороны Cloudflare (`CLOUDFLARE_API_TOKEN`):** запросы, ошибки, 4xx/5xx и CPU каждого Worker за сутки против прошлых суток (сплеск ×4, рост 4xx ×3 — признак сканирования или атаки); строки уровня `error` из Workers Logs; WAF/firewall-события зоны с топом по действию, источнику, стране и пути; доля 5xx с edge; размер и нагрузка D1. Cloudflare режет атаки сам, но молча — отчёт собирает это в одно место и добавляет то, чего у Cloudflare нет: реальные ответы страниц, контент, контракты API.
 
-Cloudflare сам режет атаки на edge, но не говорит об этом, пока не зайдёшь в дашборд. Этот отчёт собирает всё в одно место и добавляет то, чего у Cloudflare нет: реальные ответы страниц, маркеры контента, TLS, API-контракты.
+## Деплой и секреты
 
-## Токен Cloudflare (только чтение)
+```bash
+npx wrangler deploy --config health/wrangler.jsonc
+npx wrangler secret put HEALTH_KEY --config health/wrangler.jsonc              # любая длинная строка; открывает /latest и /run
+npx wrangler secret put CLOUDFLARE_API_TOKEN --config health/wrangler.jsonc   # см. ниже
+npx wrangler secret put HEALTH_TELEGRAM_BOT_TOKEN --config health/wrangler.jsonc   # необязательно
+npx wrangler secret put HEALTH_TELEGRAM_CHAT_ID --config health/wrangler.jsonc     # необязательно
+```
 
-Dashboard → My Profile → API Tokens → Create Token → Custom. Права:
+Посмотреть последний отчёт: `https://devnervs-health.boris-reminder.workers.dev/latest?key=HEALTH_KEY` (или `/latest.json`). Запустить проверку сейчас: `curl -X POST -H "Authorization: Bearer HEALTH_KEY" https://devnervs-health.boris-reminder.workers.dev/run`.
+
+Токен Cloudflare (только чтение): Dashboard → My Profile → API Tokens → Create Token → Custom:
 
 | Область | Право |
 |---|---|
@@ -30,15 +36,11 @@ Dashboard → My Profile → API Tokens → Create Token → Custom. Права:
 | Zone · Analytics | Read |
 | Zone · Firewall Services | Read |
 
-Токен задаётся переменной окружения `CLOUDFLARE_API_TOKEN` в облачном окружении рутины (https://claude.ai/code/environments → окружение → переменные), никогда в репозитории.
-
-## Уведомления в Telegram (необязательно)
-
-`HEALTH_TELEGRAM_BOT_TOKEN` и `HEALTH_TELEGRAM_CHAT_ID` — краткая сводка приходит в чат при предупреждениях и критических проблемах; `HEALTH_ALWAYS_NOTIFY=1` — каждый день.
+Без токена работает только внешний слой; в отчёте так и написано.
 
 ## Как добавить или поменять сайт
 
-Правится только `health/sites.json`. Поля:
+Правится только `health/sites.json`, потом `npx wrangler deploy --config health/wrangler.jsonc`. Поля:
 
 ```jsonc
 {
@@ -58,8 +60,8 @@ Dashboard → My Profile → API Tokens → Create Token → Custom. Права:
 }
 ```
 
-Переезд сайта на новый домен = поменять `url`, добавить `zone`, поставить `expectIndexable: true`.
+Переезд сайта на новый домен = поменять `url`, добавить `zone`, поставить `expectIndexable: true`, задеплоить воркер. Бесплатный план Workers даёт 50 подзапросов на один запуск — держите сумму `paths` + `endpoints` + Cloudflare-запросов ниже этого (сейчас ~18 внешних + до 30 к API при токене).
 
-## Коды выхода
+## Где лежит история
 
-`0` — всё зелёное, `1` — есть предупреждения, `2` — есть критичное. `health/last-run.json` — полный результат последнего запуска (в git не попадает).
+D1 `devnervs-health` (id `92f0291a-e004-4ceb-891e-c17cad2582d2`), таблица `runs`: `ran_at`, `severity` (0/1/2), `report_md`, `findings` (JSON), `results` (JSON). Рутина читает: `SELECT ran_at, severity, findings FROM runs ORDER BY id DESC LIMIT 2`.

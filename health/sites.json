@@ -11,13 +11,7 @@
         "/realty",
         "/realty/zhk-nezalezhnosti",
         "/materials",
-        "/contractors",
-        "/masters",
-        "/design",
-        "/invest",
-        "/contacts",
         "/sitemap.xml",
-        "/robots.txt",
         "/admin/login"
       ],
       "expectText": "BUDni",
@@ -33,19 +27,6 @@
         },
         {
           "method": "GET",
-          "path": "/api/lead",
-          "expectStatus": 405,
-          "why": "лише POST"
-        },
-        {
-          "method": "POST",
-          "path": "/api/telegram",
-          "body": {},
-          "expectStatus": 503,
-          "why": "бот не налаштований на превʼю: 503 без секретів, 401 без правильного заголовка"
-        },
-        {
-          "method": "GET",
           "path": "/admin",
           "expectStatus": 307,
           "why": "без сесії має вести на логін"
@@ -53,7 +34,8 @@
       ],
       "worker": "budni-preview",
       "d1": "724d4e5a-5a7e-4c5e-b66e-fda335fd05ee",
-      "enabled": true
+      "enabled": true,
+      "service": "budni-preview"
     },
     {
       "name": "Будуй.UA (прод, поки старий сайт)",
@@ -65,7 +47,8 @@
       "expectText": "Будуй",
       "worker": "budui-ua",
       "d1": "61b900d3-5e56-4da6-ab85-985575b27e9c",
-      "enabled": true
+      "enabled": true,
+      "service": "budui-ua"
     },
     {
       "name": "Церква Еммануїл",
@@ -104,7 +87,8 @@
       "enabled": true,
       "expectStatus": {
         "/": 301
-      }
+      },
+      "service": "emmanuil-chernivtsi"
     },
     {
       "name": "Spravno Web",
@@ -126,7 +110,8 @@
       },
       "worker": "kmaster-backend",
       "d1": "7841980e-fcbf-4132-a421-df8327348ffb",
-      "enabled": true
+      "enabled": true,
+      "service": "kmaster-backend"
     },
     {
       "name": "MS Design",
