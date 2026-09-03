@@ -1,0 +1,33 @@
+{
+  // The health monitor: one small Worker on a daily cron, its own D1 for the
+  // run history. Deploy from the repository root:
+  //   npx wrangler deploy --config health/wrangler.jsonc
+  // Secrets (npx wrangler secret put NAME --config health/wrangler.jsonc):
+  //   HEALTH_KEY, CLOUDFLARE_API_TOKEN, HEALTH_TELEGRAM_BOT_TOKEN, HEALTH_TELEGRAM_CHAT_ID
+  "name": "devnervs-health",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-07-30",
+  "workers_dev": true,
+  "triggers": {
+    // 04:40 UTC = 07:40 Kyiv in summer, 06:40 in winter; the Claude routine reads the result at 05:00 UTC.
+    "crons": ["40 4 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "HEALTH_DB",
+      "database_name": "devnervs-health",
+      "database_id": "92f0291a-e004-4ceb-891e-c17cad2582d2"
+    }
+  ],
+  // Workers on this account cannot be reached through their public workers.dev
+  // address from another Worker; a service binding calls them directly.
+  "services": [
+    { "binding": "SVC_BUDNI_PREVIEW", "service": "budni-preview" },
+    { "binding": "SVC_BUDUI_UA", "service": "budui-ua" },
+    { "binding": "SVC_EMMANUIL_CHERNIVTSI", "service": "emmanuil-chernivtsi" },
+    { "binding": "SVC_KMASTER_BACKEND", "service": "kmaster-backend" }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
