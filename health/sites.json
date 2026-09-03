@@ -1,0 +1,149 @@
+{
+  "cloudflare": {
+    "accountId": "367ca81763872c78fbc5a8d69ac8eb1d"
+  },
+  "sites": [
+    {
+      "name": "BUDni (превʼю)",
+      "url": "https://budni-preview.boris-reminder.workers.dev",
+      "paths": [
+        "/",
+        "/realty",
+        "/realty/zhk-nezalezhnosti",
+        "/materials",
+        "/contractors",
+        "/masters",
+        "/design",
+        "/invest",
+        "/contacts",
+        "/sitemap.xml",
+        "/robots.txt",
+        "/admin/login"
+      ],
+      "expectText": "BUDni",
+      "expectIndexable": false,
+      "securityHeaders": true,
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/api/lead",
+          "body": {},
+          "expectStatus": 400,
+          "why": "форма має відхиляти порожній запит, а не падати"
+        },
+        {
+          "method": "GET",
+          "path": "/api/lead",
+          "expectStatus": 405,
+          "why": "лише POST"
+        },
+        {
+          "method": "POST",
+          "path": "/api/telegram",
+          "body": {},
+          "expectStatus": 503,
+          "why": "бот не налаштований на превʼю: 503 без секретів, 401 без правильного заголовка"
+        },
+        {
+          "method": "GET",
+          "path": "/admin",
+          "expectStatus": 307,
+          "why": "без сесії має вести на логін"
+        }
+      ],
+      "worker": "budni-preview",
+      "d1": "724d4e5a-5a7e-4c5e-b66e-fda335fd05ee",
+      "enabled": true
+    },
+    {
+      "name": "Будуй.UA (прод, поки старий сайт)",
+      "url": "https://budui-ua.boris-reminder.workers.dev",
+      "paths": [
+        "/",
+        "/catalog"
+      ],
+      "expectText": "Будуй",
+      "worker": "budui-ua",
+      "d1": "61b900d3-5e56-4da6-ab85-985575b27e9c",
+      "enabled": true
+    },
+    {
+      "name": "Церква Еммануїл",
+      "url": "https://emmanuil.cv.ua",
+      "paths": [
+        "/",
+        "/sitemap.xml",
+        "/robots.txt"
+      ],
+      "expectText": "Еммануїл",
+      "expectIndexable": true,
+      "worker": "app",
+      "zone": "emmanuil.cv.ua",
+      "d1": "cdecfe4a-5e3d-4cf8-983f-a321805c484c",
+      "enabled": true
+    },
+    {
+      "name": "Церква Еммануїл (new.)",
+      "url": "https://new.emmanuil.cv.ua",
+      "paths": [
+        "/"
+      ],
+      "enabled": true,
+      "expectStatus": {
+        "/": 301
+      },
+      "note": "переадресовує на emmanuil.cv.ua; якщо стане 200 — це зміна"
+    },
+    {
+      "name": "Еммануїл (старий worker)",
+      "url": "https://emmanuil-chernivtsi.boris-reminder.workers.dev",
+      "paths": [
+        "/"
+      ],
+      "worker": "emmanuil-chernivtsi",
+      "enabled": true,
+      "expectStatus": {
+        "/": 301
+      }
+    },
+    {
+      "name": "Spravno Web",
+      "url": "https://spravno.pages.dev",
+      "paths": [
+        "/"
+      ],
+      "expectText": "Spravno",
+      "enabled": true
+    },
+    {
+      "name": "Spravno backend",
+      "url": "https://kmaster-backend.boris-reminder.workers.dev",
+      "paths": [
+        "/health"
+      ],
+      "expectStatus": {
+        "/health": 200
+      },
+      "worker": "kmaster-backend",
+      "d1": "7841980e-fcbf-4132-a421-df8327348ffb",
+      "enabled": true
+    },
+    {
+      "name": "MS Design",
+      "url": "https://msdesign-portfolio.pages.dev",
+      "paths": [
+        "/"
+      ],
+      "expectText": "MS Design",
+      "enabled": true
+    },
+    {
+      "name": "Портфоліо Бориса",
+      "url": "https://CHANGE-ME.example",
+      "paths": [
+        "/"
+      ],
+      "enabled": false
+    }
+  ]
+}
