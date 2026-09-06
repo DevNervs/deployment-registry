@@ -1,0 +1,37 @@
+{
+  // The Planfix link audit: one small Worker on a frequent cron, its own D1 for
+  // the run history. A tick continues whatever job is in flight, so a full pass
+  // over the base is spread over many invocations instead of blowing the
+  // per-invocation subrequest and CPU limits. Deploy from the repository root:
+  //   npx wrangler deploy --config planfix/wrangler.jsonc
+  // Secrets (npx wrangler secret put NAME --config planfix/wrangler.jsonc):
+  //   PLANFIX_TOKEN, PLANFIX_ACCOUNT, PLANFIX_HOST, AUDIT_KEY
+  "name": "startime-planfix-audit",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-07-30",
+  "workers_dev": true,
+  "triggers": {
+    // Every two minutes: most ticks find nothing to do and cost one D1 read.
+    // The daily job starts at 03:xx UTC and the weekly full pass on Sunday at
+    // 00:xx UTC — both well before the Claude routine reads the result at 06:00.
+    "crons": ["*/2 * * * *"]
+  },
+  "vars": {
+    "DAILY_WINDOW_DAYS": "14",
+    // Conservative per-tick budgets that stay inside the Workers free plan.
+    "CHUNK_DEAL_PAGES": "25",
+    "CHUNK_CHAT_PAGES": "25",
+    "CHUNK_CONTACTS": "60",
+    "JOB_DEADLINE_HOURS": "14"
+  },
+  "d1_databases": [
+    {
+      "binding": "AUDIT_DB",
+      "database_name": "startime-planfix-audit",
+      "database_id": "b3e76997-eae3-40c0-85c2-91fab696dba7"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

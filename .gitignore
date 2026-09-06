@@ -1,2 +1,5 @@
 health/last-run.json
 node_modules
+
+# Локальный кэш wrangler отдельных воркеров
+planfix/.wrangler
